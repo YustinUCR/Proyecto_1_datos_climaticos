@@ -8,24 +8,393 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+# Carga de Librerias
 
-## R Markdown
+```{r Carga de librerias}
+library(ggplot2)
+library(dplyr)
+library(hrbrthemes)
+library(gridExtra)
+library(grid)
+library(showtext)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r grafico de barras temperatura, echo=FALSE}
-sum(cars)
 ```
 
 
-## Including Plots
+# Carga de datos
+En este caso vamos a trabajar con los datos climáticos de liberia
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r Carga de datos }
+dat <- read.csv("liberia_datos_climaticos.csv", sep = ",", na.strings="" , dec=",")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+El siguiente paso es limpiar cuidadosamente los datos en caso de celdas vacías, en este caso se usará la función **na.omit** para obtener un nuevo dataframe limpio de celdas vacías.
+
+```{r limpieza del data }
+newdata <- na.omit(dat)
+```
+
+Ahora para una mejor manipulación de los datos se cambiarán los nombres predeterminados que traen el conjunto de datos por unos más fáciles de trabajar, en este caso con la función **rename**.
+
+```{r Cambio de nombres }
+newdata <-
+  newdata %>%
+  rename(Fecha = Date,
+         Temperatura = Temperatura..Celsius.,
+         HumedadRelativa = HumedadRelativa....,
+         Velocidadviento = VelocidadViento..m.s.,
+         Lluvia = Lluvia..mm.,
+         Irradiación = Irradiacion..W.m2.,
+         EvapoTranspiracion = EvapoTranspiracion..mm.)
+
+```
+
+Es necesario también establecer un formato para la fecha para los ejercicios futuros, esto simplemente con el comando **as.Date**.
+
+```{r Cambio de formato de fecha }
+newdata$Fecha <- as.Date(newdata$Fecha, "%d/%m/%Y")
+
+```
+
+# Creación de Histogramas
+ En este caso utilizaremos el paquete ggplot2 para la creación de una serie de histogramas, y por último la función grid para ordernalos todos en un solo panel.
+ 
+## Temperatura 
+
+```{r Histograma de Temperatura }
+a <- ggplot(newdata, aes(x = Temperatura)) +
+  geom_histogram(binwidth = 0.1,
+                 color = "black",
+                 fill = "red") +
+  ggtitle("Temperatura") +
+  xlab("Temperatura(°C)") +
+  ylab("Frecuencia(%)") +
+  theme_dark()
+
+```
+
+
+## Humedad Relativa
+
+```{r Histograma de Humedad }
+b <- ggplot(newdata, aes(x = HumedadRelativa)) +
+  geom_histogram(binwidth = 0.5,
+                 color = "black",
+                 fill = "#1E90FF") +
+  ggtitle("Humedad Relativa") +
+  xlab("Humedad relativa(%)") +
+  ylab("Frecuencia(%)") +
+  theme_dark()
+
+```
+
+## Velocidad del viento
+
+```{r Histograma de Vientoo }
+c <- ggplot(newdata, aes(x = Velocidadviento)) +
+  geom_histogram(binwidth = 0.4,
+                 color = "black",
+                 fill = "#808080") +
+  ggtitle("Velocidad Viento") +
+  xlab("Velocidad del viento (m/s)") +
+  ylab("Frecuencia(%)") +
+  theme_dark()
+
+```
+
+## Lluvia
+
+```{r Histograma de Lluvia }
+d <- ggplot(newdata, aes(x = Lluvia)) +
+  geom_histogram(binwidth = 10,
+                 color = "black",
+                 fill = "#0000FF") +
+  ggtitle("Lluvia") +
+  xlab("Precipitación(mm)") +
+  ylab("Frecuencia(%)") +
+  theme_dark()
+
+```
+
+## Irradiación
+
+```{r Histograma de Irradiaciónn }
+e <- ggplot(newdata, aes(x = Irradiación)) +
+  geom_histogram(binwidth = 8,
+                 color = "black",
+                 fill = "#FF4500") +
+  ggtitle("Irradición") +
+  xlab("Irradiación(wm2)") +
+  ylab("Frecuencia(%)") +
+  theme_dark()
+
+```
+
+##Evapotranspiración
+
+```{r Histograma de Evapo }
+
+f <- ggplot(newdata, aes(x = EvapoTranspiracion)) +
+  geom_histogram(binwidth = 0.4,
+                 color = "black",
+                 fill = "#B0E0E6") +
+  ggtitle("Evapotranspiracion") +
+  xlab("Evapotranspiracion(mm)") +
+  ylab("Frecuencia(%)") +
+  theme_dark()
+
+```
+
+# Resultado de los histogramas
+
+```{r fig.width=12, fig.height=8}
+
+grid.arrange(a, b, c, d, e, f, nrow=2,
+       top= textGrob("Histogramas",gp=gpar(fontsize=25,font=15))) 
+
+```
+
+# Promediando variables mensuales
+
+Se crearon nuevos dataframes gracias a la función taplly. En este caso para promediar mensualmente las variables de temperatura, humedad, velocidad de viento e irradiación, mientras que por otra parte se sumó la lluvia y evapotranspiración a valores mensuales.
+
+```{r Promedios mensuales }
+
+prom_mensual_temp <- data.frame(mes = 1:12,
+                                Temperatura = tapply
+                                (newdata$Temperatura,
+                                  format(newdata$Fecha, format = "%m"),
+                                  FUN = mean))
+
+rom_mensual_humedad <- data.frame(mes = 1:12,
+                                HumedadRelativa = tapply
+                                (newdata$HumedadRelativa,
+                                  format(newdata$Fecha, format = "%m"),
+                                  FUN = mean))
+
+prom_mensual_viento <- data.frame(mes = 1:12,
+                                  VelocidadViento = tapply
+                                  (newdata$Velocidadviento,
+                                    format(newdata$Fecha, format = "%m"),
+                                    FUN = mean))
+
+prom_mensual_irradi <- data.frame(mes = 1:12,
+                                  Irradiación = tapply
+                                  (newdata$Irradiación,
+                                    format(newdata$Fecha, format = "%m"),
+                                    FUN = mean))
+
+suma_mensual_lluvia <- data.frame(mes = 1:12,
+                                  Lluvia = tapply
+                                  (newdata$Lluvia,
+                                    format(newdata$Fecha, format = "%m"),
+                                    FUN = sum))
+
+suma_mensual_evapo <- data.frame(mes = 1:12,
+                                  EvapoTranspiración = tapply
+                                  (newdata$EvapoTranspiracion,
+                                    format(newdata$Fecha, format = "%m"),
+                                    FUN = sum))
+
+```
+
+# Creación de gráficos de lineas
+Se crearon gráficos igualmente mediante la función ggplot y se unieron gracias a la función grid.
+
+
+# Temperatura 
+```{r Grafico de linea Temperatura }
+
+g <- ggplot(prom_mensual_temp, aes(x=mes, y=Temperatura )) + 
+  geom_line(colour="red", lwd = 1, lty = 1)+ 
+  ggtitle(" Promedio Temperatura") +
+  xlab("Mes") +
+  ylab("Temperatura(°C)")+
+    theme_bw()
+
+```
+
+# Humedad Relativa
+
+```{r Histograma de linea Humedad}
+
+h <- ggplot(rom_mensual_humedad, aes(x=mes, y=HumedadRelativa )) + 
+  geom_line(colour="#076DFD", lwd = 1.5, lty = 2) + 
+  ggtitle("Promedio Humedad Relativa") +
+  xlab("Mes") +
+  ylab("Humedad Relativa(%)")+
+   theme_bw()
+
+
+```
+# Irradiación
+
+```{r Histograma de Irradiación }
+i <- ggplot(prom_mensual_irradi, aes(x=mes, y=Irradiación )) + 
+  geom_line(colour="#FF4500", lwd = 1.5, lty = 3) + 
+  ggtitle("Promedio de Irradiación") +
+  xlab("Mes") +
+  ylab("Irradiación(Mw2)")+
+    theme_bw()
+
+
+```
+# Velocidad de viento
+
+```{r Histograma de Viento }
+j <- ggplot(prom_mensual_viento, aes(x=mes, y=VelocidadViento )) + 
+  geom_line(colour="#808080", lwd = 1.5, lty = 4) + 
+  ggtitle("Promedio Velocidad de viento") +
+  xlab("Mes") +
+  ylab("Velocidad del viento(ms)")+
+   theme_bw()
+
+
+```
+# Evapotranspiración
+
+```{r Histograma de Evapotrans }
+k <- ggplot(suma_mensual_evapo, aes(x=mes, y=EvapoTranspiración )) + 
+  geom_line(colour="#B0E0E6", lwd = 1.5, lty = 5) + 
+  ggtitle("Suma de Evapotranspiración") +
+  xlab("Mes") +
+  ylab("Evapotranspiración") +
+    theme_bw()
+
+
+
+```
+# Lluvia
+
+```{r Histograma de lluvia }
+l <- ggplot(suma_mensual_lluvia, aes(x=mes, y=Lluvia )) + 
+  geom_line(colour="#0000FF", lwd = 1.5, lty = 6) + 
+  ggtitle("Suma de Lluvia") +
+  xlab("Mes") +
+  ylab("Lluvia(mm)") +
+  theme_bw()
+
+
+
+```
+
+#Resultados
+
+```{r Resultados lineas, fig.width=12, fig.height=8}
+
+grid.arrange(g, h, i, j, k, l, nrow=2,
+             top= textGrob("Gráficos de lineas",gp=gpar(fontsize=25,font=15)))
+
+
+```
+
+# Creación de gráficos de dispersión para relacionar variables.
+
+Igualmente se crearon con ggplot2 y se unieron mediante grid. Se relacionaron las variables que se muestran al final.
+
+
+## Temperatura y Humedad Relativa
+
+```{r Gráfico de dispersión entre la temperatura y humedad relativa }
+
+m <- ggplot(newdata, aes(x = Temperatura)) +
+  geom_point(
+    aes(y = HumedadRelativa)
+  ) +
+  ggtitle(" Humedad Relativa y Temperatura") +
+  xlab("Temperatura(C)") +
+  ylab("Humedad Relativa(%)") +
+  theme_get()
+
+
+```
+
+## Velocidad de viento y lluvia
+
+```{r Grafico de dispersión entre velocidad del viento y lluvia }
+
+n <- ggplot(newdata, aes(x = Velocidadviento)) +
+  geom_point(
+    aes(y = Lluvia)
+  ) +
+  ggtitle("Velocidad de Viento y Lluvia") +
+  xlab("Velocidad del viento(ms)") +
+  ylab("Lluvia(mm)") +
+  theme_get()
+
+
+```
+
+## Irradiación y Evapotranspiración
+
+```{r Gráfico de dispersión entre la irradiación y evapotranspiracion }
+
+o <- ggplot(newdata, aes(x = Irradiación)) +
+  geom_point(
+    aes(y = EvapoTranspiracion)
+  ) +
+  ggtitle(" Irradiación y EvapoTranspiración") +
+  xlab("Irradiación(Wm2)") +
+  ylab("Evapotranspiración(mm)") +
+  theme_get()
+
+
+```
+
+## Evapotranspiración 
+
+```{r Gráfico de dispersion entre Evapotranspiración y lluvia }
+
+p <- ggplot(newdata, aes(x = EvapoTranspiracion)) +
+  geom_point(
+    aes(y = Lluvia)
+  ) +
+  ggtitle(" Evapotranspiración y lluvia") +
+  xlab("EvapoTranspiracion(mm)") +
+  ylab("Lluvia(mm)") +
+  theme_get()
+
+
+```
+
+## Irradiación y Temperatura
+
+```{r Gráfico de dispersion entre Irradiacion y Temperatura }
+
+q <- ggplot(newdata, aes(x = Irradiación)) +
+  geom_point(
+    aes(y = Temperatura)
+  ) +
+  ggtitle(" Irradiación y Temperatura") +
+  xlab("Irradiación(Wm2)") +
+  ylab("Temperatura(°C)") +
+  theme_get()
+
+
+```
+
+## Lluvia y Humedad
+
+```{r Gráfico de dispersion entre Lluvia y humedad }
+
+r <- ggplot(newdata, aes(x = HumedadRelativa)) +
+  geom_point(
+    aes(y = Lluvia)
+  ) +
+  ggtitle( "Humedad Relativa y Lluvia") +
+  xlab("Humedad Relativa(%)") +
+  ylab("Lluvia(mm)") +
+  theme_get()
+
+
+
+```
+
+#Resultados
+
+```{r Resultados puntos, fig.width=12, fig.height=8}
+
+grid.arrange(m, n, o, p, q, r, nrow=2,
+             top= textGrob("Gráficos de dispersión",gp=gpar(fontsize=25,font=15)))
+
+```
